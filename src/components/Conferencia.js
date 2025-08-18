@@ -7,13 +7,15 @@ import 'leaflet/dist/leaflet.css';
 let socket;
 
 // Funções de formatação
-const formatLabel = (key, labels) => {
-    return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
-};
-const formatStreetName = (name) => {
-    if (!name) return '';
-    return name.normalize("NFD").replace(/[\u00c0-\u017f]/g, "").toUpperCase();
-};
+// REMOVIDAS pois não estavam sendo usadas. Se forem usadas no futuro, devem ser reintroduzidas.
+// const formatLabel = (key, labels) => {
+//     return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
+// };
+// const formatStreetName = (name) => {
+//     if (!name) return '';
+//     return name.normalize("NFD").replace(/[\u00c0-\u017f]/g, "").toUpperCase();
+// };
+
 const formatClientName = (name) => {
     if (!name) return '';
     return name.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -48,83 +50,83 @@ const validateCPF = (cpf) => {
 
 // Componente de Mapa Leaflet
 const LeafletMap = ({ adhesion }) => {
-  const mapContainerRef = useRef(null);
-  const mapRef = useRef(null);
-  const [coords, setCoords] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+    const mapContainerRef = useRef(null);
+    const mapRef = useRef(null);
+    const [coords, setCoords] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState('');
 
-  useEffect(() => {
-    const findLocation = async () => {
-      setIsLoading(true);
-      setError('');
-      if (adhesion.latitude && adhesion.longitude) {
-        const lat = parseFloat(adhesion.latitude);
-        const lon = parseFloat(adhesion.longitude);
-        if (!isNaN(lat) && !isNaN(lon)) {
-          setCoords([lat, lon]);
-          setIsLoading(false);
-          return;
+    useEffect(() => {
+        const findLocation = async () => {
+            setIsLoading(true);
+            setError('');
+            if (adhesion.latitude && adhesion.longitude) {
+                const lat = parseFloat(adhesion.latitude);
+                const lon = parseFloat(adhesion.longitude);
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    setCoords([lat, lon]);
+                    setIsLoading(false);
+                    return;
+                }
+            }
+            if (!adhesion.endereco) {
+                setError('Endereço não fornecido.');
+                setIsLoading(false);
+                return;
+            }
+            const fullAddress = `${adhesion.endereco}, ${adhesion.comunidade || ''}, Guarujá, SP, Brasil`;
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}`;
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    setCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+                } else {
+                    setError('Endereço não encontrado.');
+                }
+            } catch (err) {
+                setError('Falha ao obter coordenadas.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        findLocation();
+    }, [adhesion]); // Dependência 'adhesion' já estava correta aqui.
+
+    useEffect(() => {
+        if (mapContainerRef.current && coords && !mapRef.current) {
+            delete L.Icon.Default.prototype._getIconUrl;
+            L.Icon.Default.mergeOptions({
+                iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+                iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+            });
+            mapRef.current = L.map(mapContainerRef.current).setView(coords, 16);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(mapRef.current);
+            L.marker(coords).addTo(mapRef.current)
+                .bindPopup(`<b>${adhesion.nome_cliente || 'Localização'}</b><br>${adhesion.endereco}`)
+                .openPopup();
         }
-      }
-      if (!adhesion.endereco) {
-        setError('Endereço não fornecido.');
-        setIsLoading(false);
-        return;
-      }
-      const fullAddress = `${adhesion.endereco}, ${adhesion.comunidade || ''}, Guarujá, SP, Brasil`;
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}`;
-      try {
-        const response = await fetch(url);
-        const data = await response.json();
-        if (data && data.length > 0) {
-          setCoords([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
-        } else {
-          setError('Endereço não encontrado.');
-        }
-      } catch (err) {
-        setError('Falha ao obter coordenadas.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    findLocation();
-  }, [adhesion]);
+        return () => {
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+        };
+    }, [coords, adhesion]);
 
-  useEffect(() => {
-    if (mapContainerRef.current && coords && !mapRef.current) {
-      delete L.Icon.Default.prototype._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-        iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-      });
-      mapRef.current = L.map(mapContainerRef.current).setView(coords, 16);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(mapRef.current);
-      L.marker(coords).addTo(mapRef.current)
-        .bindPopup(`<b>${adhesion.nome_cliente || 'Localização'}</b><br>${adhesion.endereco}`)
-        .openPopup();
-    }
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-    };
-  }, [coords, adhesion]);
-
-  return (
-    <div>
-      <h4 className="text-lg font-semibold text-gray-800 mb-2">Localização no Mapa</h4>
-      <div className="w-full h-96 rounded-lg overflow-hidden border border-gray-300">
-        {isLoading && <div className="flex items-center justify-center h-full">A carregar mapa...</div>}
-        {error && <div className="flex items-center justify-center h-full text-red-600">{error}</div>}
-        <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
-      </div>
-    </div>
-  );
+    return (
+        <div>
+            <h4 className="text-lg font-semibold text-gray-800 mb-2">Localização no Mapa</h4>
+            <div className="w-full h-96 rounded-lg overflow-hidden border border-gray-300">
+                {isLoading && <div className="flex items-center justify-center h-full">A carregar mapa...</div>}
+                {error && <div className="flex items-center justify-center h-full text-red-600">{error}</div>}
+                <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+            </div>
+        </div>
+    );
 };
 
 
@@ -152,9 +154,9 @@ const EditAdhesionModal = ({ adhesion, onClose, onSave, loading, error }) => {
             const isValid = validateCPF(editedAdhesion.cpf);
             setEditedAdhesion(prev => ({ ...prev, cpf_status: isValid ? 'Válido' : 'Inválido' }));
         } else {
-             setEditedAdhesion(prev => ({ ...prev, cpf_status: '' }));
+            setEditedAdhesion(prev => ({ ...prev, cpf_status: '' }));
         }
-    }, [editedAdhesion.cpf]);
+    }, [editedAdhesion.cpf]); // Dependência 'editedAdhesion.cpf' já estava correta aqui.
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -255,9 +257,15 @@ const EditAdhesionModal = ({ adhesion, onClose, onSave, loading, error }) => {
 // Componente principal da página
 function Conferencia({ token, user, onLogout }) {
     const navigate = useNavigate();
-    const API_ADESOES_URL = 'http://localhost:3001/api/adhesions';
-    const API_CONFERENCIA_URL = 'http://localhost:3001/api/conferencia'; 
-    const SOCKET_SERVER_URL = "http://localhost:3001";
+    // === ATUALIZAR URLs para apontar para o seu backend na Vercel ===
+    // Use a URL base do seu deploy na Vercel para todas as chamadas API
+    // Se seu backend está na raiz do domínio Vercel (ex: re-consulta-adesao.vercel.app),
+    // você pode usar '/api/adhesions' para que a Vercel roteie corretamente.
+    // SE SEU VERSELC.JSON ESTIVER CONFIGURADO PARA ISSO!
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:3001"; // Usar variável de ambiente
+    const API_ADESOES_URL = `${API_BASE_URL}/api/adhesions`;
+    const API_CONFERENCIA_URL = `${API_BASE_URL}/api/conferencia`; 
+    const SOCKET_SERVER_URL = API_BASE_URL; // O servidor de socket é o mesmo da API
 
     const [tableData, setTableData] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -275,12 +283,13 @@ function Conferencia({ token, user, onLogout }) {
     const [loadingSave, setLoadingSave] = useState(false);
     const [errorSave, setErrorSave] = useState(null);
 
-    useEffect(() => {
-        if (token && user?.id) {
-            socket = io(SOCKET_SERVER_URL, { auth: { token: token } });
-            return () => { if (socket) socket.disconnect(); };
-        }
-    }, [token, user?.id]);
+   // Dentro da função Conferencia()
+useEffect(() => {
+    if (token && user?.id) {
+        socket = io(SOCKET_SERVER_URL, { auth: { token: token } });
+        return () => { if (socket) socket.disconnect(); };
+    }
+}, [token, user?.id, SOCKET_SERVER_URL]); // <-- CORRIGIDO: Adicionado SOCKET_SERVER_URL
 
     const fetchCombinedData = useCallback(async () => {
         if (!token) return;
@@ -306,7 +315,7 @@ function Conferencia({ token, user, onLogout }) {
         } finally {
             setLoading(false);
         }
-    }, [token, filters]);
+    }, [token, filters, API_CONFERENCIA_URL]); // Adicionadas dependências das URLs da API
 
     useEffect(() => {
         fetchCombinedData();
@@ -403,24 +412,24 @@ function Conferencia({ token, user, onLogout }) {
                         <h3 className="text-2xl font-bold text-gray-800 mb-4">Buscar Dados</h3>
                         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
                              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
-                                <div>
-                                    <label htmlFor="matricula" className="block text-sm font-medium text-gray-700 mb-1">Matrícula</label>
-                                    <input id="matricula" name="matricula" value={filters.matricula} onChange={handleFilterChange} placeholder="Buscar por Matrícula" className="w-full px-4 py-2 border rounded-md" />
-                                </div>
-                                <div>
-                                    <label htmlFor="endereco" className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
-                                    <input id="endereco" name="endereco" value={filters.endereco} onChange={handleFilterChange} placeholder="Buscar por Endereço" className="w-full px-4 py-2 border rounded-md" />
-                                </div>
-                                <div>
-                                    <label htmlFor="comunidade" className="block text-sm font-medium text-gray-700 mb-1">Comunidade</label>
-                                    <input id="comunidade" name="comunidade" value={filters.comunidade} onChange={handleFilterChange} placeholder="Buscar por Comunidade" className="w-full px-4 py-2 border rounded-md" />
-                                </div>
-                                <div>
-                                    <label htmlFor="nomeCliente" className="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
-                                    <input id="nomeCliente" name="nomeCliente" value={filters.nomeCliente} onChange={handleFilterChange} placeholder="Buscar por Nome" className="w-full px-4 py-2 border rounded-md" />
-                                </div>
-                                <button onClick={handleSearchClick} className="px-8 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 h-10">Buscar</button>
-                            </div>
+                                 <div>
+                                     <label htmlFor="matricula" className="block text-sm font-medium text-gray-700 mb-1">Matrícula</label>
+                                     <input id="matricula" name="matricula" value={filters.matricula} onChange={handleFilterChange} placeholder="Buscar por Matrícula" className="w-full px-4 py-2 border rounded-md" />
+                                 </div>
+                                 <div>
+                                     <label htmlFor="endereco" className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
+                                     <input id="endereco" name="endereco" value={filters.endereco} onChange={handleFilterChange} placeholder="Buscar por Endereço" className="w-full px-4 py-2 border rounded-md" />
+                                 </div>
+                                 <div>
+                                     <label htmlFor="comunidade" className="block text-sm font-medium text-gray-700 mb-1">Comunidade</label>
+                                     <input id="comunidade" name="comunidade" value={filters.comunidade} onChange={handleFilterChange} placeholder="Buscar por Comunidade" className="w-full px-4 py-2 border rounded-md" />
+                                 </div>
+                                 <div>
+                                     <label htmlFor="nomeCliente" className="block text-sm font-medium text-gray-700 mb-1">Nome do Cliente</label>
+                                     <input id="nomeCliente" name="nomeCliente" value={filters.nomeCliente} onChange={handleFilterChange} placeholder="Buscar por Nome" className="w-full px-4 py-2 border rounded-md" />
+                                 </div>
+                                 <button onClick={handleSearchClick} className="px-8 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 h-10">Buscar</button>
+                             </div>
                         </div>
                     </div>
 

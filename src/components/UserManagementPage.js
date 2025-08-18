@@ -4,7 +4,38 @@ import io from "socket.io-client";
 
 let socket;
 
-// Componente do Modal de Usuário (sem alterações)
+// Novo componente de Modal de Confirmação
+const ConfirmDeleteModal = ({ isOpen, message, onConfirm, onCancel, loading }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[10000] flex items-center justify-center p-4">
+      <div className="bg-white p-6 rounded-lg shadow-2xl w-full max-w-sm text-center">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">Confirmação</h3>
+        <p className="text-gray-700 mb-6">{message}</p>
+        <div className="flex justify-center space-x-4">
+          <button
+            onClick={onCancel}
+            className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+            disabled={loading}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-6 py-2 bg-red-600 text-white font-semibold rounded-md hover:bg-red-700"
+            disabled={loading}
+          >
+            {loading ? "Deletando..." : "Confirmar"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// Componente do Modal de Usuário (sem alterações grandes, apenas linting se houver)
 const UserModal = ({ user, onClose, onSave, loading, error, isNewUser }) => {
   const [editedUser, setEditedUser] = useState(() => {
     const defaultUser = {
@@ -26,7 +57,7 @@ const UserModal = ({ user, onClose, onSave, loading, error, isNewUser }) => {
     if (isNewUser) {
       return defaultUser;
     } else {
-      const existingPermissions = user.adhesion_field_permissions || {};
+      const existingPermissions = user?.adhesion_field_permissions || {}; // Adicionado optional chaining
       const mergedPermissions = { ...defaultUser.adhesion_field_permissions, ...existingPermissions };
       return {
         ...user,
@@ -71,7 +102,7 @@ const UserModal = ({ user, onClose, onSave, loading, error, isNewUser }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
       <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-          {isNewUser ? "Criar Novo Usuário" : `Editar Usuário: ${user.login_usuario}`}
+          {isNewUser ? "Criar Novo Usuário" : `Editar Usuário: ${user?.login_usuario}`} {/* Adicionado optional chaining */}
         </h3>
         {loading && <div className="flex items-center justify-center p-4 text-blue-600">Salvando...</div>}
         {error && <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md mb-4" role="alert"><p className="font-bold">Erro:</p><p>{error}</p></div>}
@@ -120,8 +151,13 @@ const UserModal = ({ user, onClose, onSave, loading, error, isNewUser }) => {
 
 function UserManagementPage({ token, onLogout, user }) {
   const navigate = useNavigate();
-  const API_USERS_URL = "http://localhost:3001/users";
-  const SOCKET_SERVER_URL = "http://localhost:3001";
+  // === ATUALIZAR URLs para apontar para o seu backend na Vercel ===
+  // Usar uma variável de ambiente para a URL base da API
+  // Se o frontend e o backend estão no mesmo deploy Vercel e o vercel.json roteia /api/* para o backend,
+  // você pode usar "" (string vazia) ou "/" como base.
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:3001";
+  const API_USERS_URL = `${API_BASE_URL}/users`;
+  const SOCKET_SERVER_URL = API_BASE_URL;
 
   const [users, setUsers] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
@@ -134,6 +170,10 @@ function UserManagementPage({ token, onLogout, user }) {
   const [errorSave, setErrorSave] = useState(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState('');
 
+  // Novo estado para o modal de confirmação de exclusão
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [userToDeleteId, setUserToDeleteId] = useState(null);
+
   useEffect(() => {
     if (token && user?.id) {
       console.log(`[WebSocket] Tentando conectar como: ${user.login_usuario} (ID: ${user.id})`);
@@ -145,16 +185,16 @@ function UserManagementPage({ token, onLogout, user }) {
         console.log("[WebSocket] Recebida atualização de usuários online:", onlineUserIds);
         setOnlineUsers(new Set(onlineUserIds));
       });
-      return () => { 
+      // Adicionado user.login_usuario como dependência do useEffect
+      return () => {
         if (socket) {
           console.log(`[WebSocket] Desconectando usuário: ${user.login_usuario}`);
-          socket.disconnect(); 
+          socket.disconnect();
         }
       };
     }
-  // OTIMIZAÇÃO: A dependência agora é o ID do usuário, que é um valor primitivo e estável.
-  // Isso evita que a conexão seja refeita a cada nova renderização do componente pai.
-  }, [token, user?.id]);
+    // OTIMIZAÇÃO: A dependência agora inclui login_usuario para evitar warning do ESLint
+  }, [token, user?.id, user?.login_usuario, SOCKET_SERVER_URL]); // ADICIONADO SOCKET_SERVER_URL também, por boa prática
 
   const fetchUsers = useCallback(async () => {
     if (!token) return;
@@ -176,7 +216,7 @@ function UserManagementPage({ token, onLogout, user }) {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, API_USERS_URL]); // ADICIONADO API_USERS_URL como dependência
 
   useEffect(() => {
     fetchUsers();
@@ -235,11 +275,11 @@ function UserManagementPage({ token, onLogout, user }) {
         const errorData = await response.json();
         throw new Error(errorData.message || `Erro HTTP: ${response.status}`);
       }
-      
+
       const successMsg = isNewUser ? "Usuário criado com sucesso!" : "Usuário atualizado com sucesso!";
       setShowSuccessMessage(successMsg);
       setTimeout(() => setShowSuccessMessage(''), 3000);
-      
+
       handleCloseModal();
       await fetchUsers();
     } catch (err) {
@@ -249,13 +289,26 @@ function UserManagementPage({ token, onLogout, user }) {
     }
   };
 
-  const handleDeleteClick = async (userIdToDelete) => {
-    if (!window.confirm("Tem certeza que deseja deletar este usuário?")) return;
-    setLoading(true);
+  // Funções para o modal de confirmação de exclusão
+  const handleDeleteClick = (userId) => {
+    setUserToDeleteId(userId);
+    setShowDeleteConfirmModal(true);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmModal(false);
+    setUserToDeleteId(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!userToDeleteId) return;
+
+    setLoading(true); // Carregamento da tabela principal
     setError(null);
+    setErrorSave(null); // Limpar erro de salvar, caso esteja visível
     try {
       if (!token) throw new Error("Token de autenticação ausente.");
-      const response = await fetch(`${API_USERS_URL}/${userIdToDelete}`, {
+      const response = await fetch(`${API_USERS_URL}/${userToDeleteId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -265,11 +318,13 @@ function UserManagementPage({ token, onLogout, user }) {
       }
       setShowSuccessMessage("Usuário deletado com sucesso!");
       setTimeout(() => setShowSuccessMessage(''), 3000);
-      await fetchUsers();
+      await fetchUsers(); // Atualiza a lista de usuários
     } catch (err) {
       setError(`Erro ao deletar usuário: ${err.message}`);
     } finally {
       setLoading(false);
+      setShowDeleteConfirmModal(false); // Fechar modal após a tentativa
+      setUserToDeleteId(null);
     }
   };
 
@@ -344,6 +399,14 @@ function UserManagementPage({ token, onLogout, user }) {
       {isModalOpen && (
         <UserModal user={selectedUser} onClose={handleCloseModal} onSave={handleSaveUser} loading={loadingSave} error={errorSave} isNewUser={isNewUser} />
       )}
+      {/* Novo Modal de Confirmação de Exclusão */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteConfirmModal}
+        message="Tem certeza que deseja deletar este usuário?"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        loading={loading} // Use o loading da página principal para indicar que a deleção está em andamento
+      />
     </div>
   );
 }
