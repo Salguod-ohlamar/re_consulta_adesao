@@ -16,6 +16,7 @@ function Login({ onLoginSuccess }) {
     const [password, setPassword] = useState(''); 
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState('');
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:3001";
 
     const handleLogin = async (event) => {
         event.preventDefault();
@@ -23,7 +24,8 @@ function Login({ onLoginSuccess }) {
         setMessageType('');
 
         try {
-            const response = await fetch('http://localhost:3001/login', { 
+            //const response = await fetch('http://localhost:3001/login', ligacao com o backend local
+            const response = await fetch(`${API_BASE_URL}/login`, {  
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ login_usuario, password }),
