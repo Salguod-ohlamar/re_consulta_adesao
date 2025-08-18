@@ -1,0 +1,6 @@
+_USER=postgres
+DB_HOST=localhost
+DB_NAME=guaruja
+DB_PASSWORD=root
+DB_PORT=5432
+JWT_SECRET=42skpw#quM9s#tFzO@VptMD4CRUJ6*Co3$m4TCu6#lBUVNr2fxRyArDqz5KO7ShR^KJ^EjQmldePJWY%Xrhit5lIAHfAwRDC7zxbpyDynrPIJU7Zby#P9Ze21KjkfjPe
