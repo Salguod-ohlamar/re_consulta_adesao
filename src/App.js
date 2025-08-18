@@ -16,7 +16,10 @@ function Login({ onLoginSuccess }) {
     const [password, setPassword] = useState(''); 
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState('');
-    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:3001";
+
+    // Define a URL base da API usando a variável de ambiente
+    // Garante que a URL base termine com uma barra se não for vazia
+    const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || "http://localhost:3001").replace(/\/+$/, ''); // Remove barra final se houver
 
     const handleLogin = async (event) => {
         event.preventDefault();
@@ -24,8 +27,10 @@ function Login({ onLoginSuccess }) {
         setMessageType('');
 
         try {
-            //const response = await fetch('http://localhost:3001/login', ligacao com o backend local
-            const response = await fetch(`${API_BASE_URL}/login`, {  
+            // Constrói a URL da API de forma robusta
+            const loginUrl = `${API_BASE_URL}/api/login`; // Adicione o prefixo /api/
+            
+            const response = await fetch(loginUrl, { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ login_usuario, password }),
@@ -85,6 +90,9 @@ function MainAppContent() {
     const navigate = useNavigate();
     const location = useLocation();
 
+    // Define a URL base da API para o logout também
+    const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || "http://localhost:3001").replace(/\/+$/, '');
+
     useEffect(() => {
         if (currentUser && location.pathname === '/') {
             let targetPath = '/configuracoes/consulta'; // Rota padrão
@@ -110,7 +118,8 @@ function MainAppContent() {
     const handleLogout = async (callApi = true) => {
         if (callApi && token) {
             try {
-                await fetch('http://localhost:3001/logout', {
+                // Constrói a URL de logout de forma robusta
+                await fetch(`${API_BASE_URL}/api/logout`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
@@ -130,7 +139,6 @@ function MainAppContent() {
         }
         const hasAccess = allowedRoles && allowedRoles.includes(currentUser.nivel_acesso);
         if (hasAccess) {
-            // Passa as props necessárias para os componentes filhos
             return React.cloneElement(children, { token, loggedInUser: currentUser, onLogout: handleLogout, user: currentUser });
         } else {
             return (
