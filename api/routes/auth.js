@@ -4,14 +4,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-// A CHAVE SECRETA CONTINUA AQUI
 const JWT_SECRET = process.env.JWT_SECRET || 'sua_chave_secreta_muito_forte_e_aleatoria';
 
-// AGORA O MÓDULO INTEIRO É UMA FUNÇÃO QUE RECEBE O 'pool'
 module.exports = (pool) => {
     const router = express.Router();
 
-    // Middleware para verificar o token JWT e obter o usuário
     const authenticateToken = async (req, res, next) => {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
@@ -26,7 +23,6 @@ module.exports = (pool) => {
             }
             
             try {
-                // AGORA USA O 'pool' QUE FOI PASSADO COMO PARÂMETRO
                 const result = await pool.query('SELECT current_session_token FROM usuarios WHERE id = $1', [user.id]);
                 const dbUser = result.rows[0];
 
@@ -43,7 +39,6 @@ module.exports = (pool) => {
         });
     };
 
-    // Middleware para verificar se o usuário tem um dos níveis de acesso permitidos
     const authorizeRoles = (allowedRoles) => {
         return (req, res, next) => {
             if (!req.user || !allowedRoles.includes(req.user.nivel_acesso)) {
@@ -57,8 +52,8 @@ module.exports = (pool) => {
     // ROTAS DE AUTENTICAÇÃO
     // ====================================================================
 
-    // Rota de Login
-    router.post('/login', async (req, res) => {
+    // === MUDANÇA AQUI: Rota de Login agora com '/api' ===
+    router.post('/api/login', async (req, res) => {
         const { login_usuario, password } = req.body;
 
         if (!login_usuario || !password) {
@@ -85,7 +80,7 @@ module.exports = (pool) => {
                 nivel_acesso: user.nivel_acesso 
             };
 
-            const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '8h' }); // Aumentei o tempo de expiração
+            const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '8h' });
 
             await pool.query('UPDATE usuarios SET current_session_token = $1 WHERE id = $2', [token, user.id]);
 
@@ -106,8 +101,8 @@ module.exports = (pool) => {
         }
     });
 
-    // Rota de Logout
-    router.post('/logout', authenticateToken, async (req, res) => {
+    // === MUDANÇA AQUI: Rota de Logout agora com '/api' ===
+    router.post('/api/logout', authenticateToken, async (req, res) => {
         try {
             const userId = req.user.id;
             await pool.query('UPDATE usuarios SET current_session_token = NULL WHERE id = $1', [userId]);
@@ -134,7 +129,6 @@ module.exports = (pool) => {
     // Rota para criar um novo usuário
     router.post('/users', authenticateToken, authorizeRoles(['admin']), async (req, res) => {
         const { login_usuario, password, nome, nivel_acesso, adhesion_field_permissions } = req.body;
-        // ... (código da rota sem alterações)
         if (!login_usuario || !password || !nome || !nivel_acesso) {
             return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
         }
@@ -159,7 +153,6 @@ module.exports = (pool) => {
     router.put('/users/:id', authenticateToken, authorizeRoles(['admin']), async (req, res) => {
         const { id } = req.params;
         const { nome, nivel_acesso, password, adhesion_field_permissions } = req.body;
-        // ... (código da rota sem alterações)
         if (!nome && !nivel_acesso && !password && adhesion_field_permissions === undefined) {
             return res.status(400).json({ message: 'Nenhum campo para atualização fornecido.' });
         }
@@ -202,7 +195,6 @@ module.exports = (pool) => {
     // Rota para deletar um usuário
     router.delete('/users/:id', authenticateToken, authorizeRoles(['admin']), async (req, res) => {
         const { id } = req.params;
-        // ... (código da rota sem alterações)
         try {
             const result = await pool.query('DELETE FROM usuarios WHERE id = $1 RETURNING id', [id]);
             if (result.rowCount === 0) {
@@ -214,6 +206,5 @@ module.exports = (pool) => {
         }
     });
     
-    // RETORNA O OBJETO COM O ROUTER E OS MIDDLEWARES
     return { router, authenticateToken, authorizeRoles };
 };
