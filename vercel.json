@@ -10,6 +10,9 @@
       "use": "@vercel/static-build",
       "config": {
         "distDir": "build"
+      },
+      "env": { 
+        "REACT_APP_API_BASE_URL": "@react_app_api_base_url" 
       }
     }
   ],
@@ -20,7 +23,7 @@
     },
     {
       "src": "/", 
-      "dest": "/frontend/index.html" 
+      "dest": "/frontend/index.html"
     },
     {
       "src": "/static/(.*)", 
