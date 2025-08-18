@@ -1,5 +1,8 @@
 {
   "version": 2,
+  "installCommand": "npm install --prefix backend && npm install --prefix frontend",
+  "buildCommand": "cd frontend && REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL npm run build",
+  "outputDirectory": "frontend/build",
   "builds": [
     {
       "src": "backend/server.js",
@@ -7,11 +10,7 @@
     },
     {
       "src": "frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
-      
+      "use": "@vercel/static-build"
     }
   ],
   "routes": [
@@ -21,7 +20,7 @@
     },
     {
       "src": "/", 
-      "dest": "/frontend/index.html"
+      "dest": "/frontend/index.html" 
     },
     {
       "src": "/static/(.*)", 
