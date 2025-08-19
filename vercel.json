@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 2, 
   "installCommand": "npm install --prefix backend && npm install --prefix frontend",
   "buildCommand": "cd frontend && REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL npm run build",
   "outputDirectory": "frontend/build",

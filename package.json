@@ -1,5 +1,5 @@
 {
-  "name": "seu-projeto-raiz",
+  "name": "re-consuta-adesao",
   "version": "1.0.0",
   "main": "backend/server.js",
   "license": "MIT",
@@ -12,7 +12,7 @@
     
   },
   "engines": {
-    "node": "18.x" 
+    "node": "22.x" 
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
