@@ -223,6 +223,14 @@ app.get(
     }
   }
 );
+const path = require("path");
+
+// Serve os arquivos estáticos do frontend React
+app.use(express.static(path.join(__dirname, "../frontend/build")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/build/index.html"));
+});
 
 // INICIA O SERVIDOR
 server.listen(port, () => {
