@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { HashRouter  as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 
 // Importa os seus componentes reais a partir da pasta /components
 import ConsultaAdesoes from './components/ConsultaAdesoes'; 
@@ -59,11 +59,11 @@ function Login({ onLoginSuccess }) {
                 <h1 className="text-3xl font-extrabold text-gray-900 mb-6 text-center">Acesso ao Sistema</h1>
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div>
-                        <label htmlFor="login_usuario" className="block text-sm font-medium text-gray-700">Usuário:</label>
+                        <label htmlFor="login_usuario" className="block text-sm font-medium text-gray-700">Utilizador:</label>
                         <input type="text" id="login_usuario" value={login_usuario} onChange={(e) => setLoginUsuario(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
                     </div>
                     <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-gray-700">Senha:</label>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700">Palavra-passe:</label>
                         <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required />
                     </div>
                     <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -124,7 +124,7 @@ function MainAppContent() {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
             } catch (error) {
-                console.error('Erro ao registrar logout no backend:', error);
+                console.error('Erro ao registar logout no backend:', error);
             }
         }
         setToken(null);
@@ -145,7 +145,7 @@ function MainAppContent() {
                 <div className="min-h-screen flex items-center justify-center bg-red-100 p-4">
                     <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md text-center">
                         <h1 className="text-3xl font-extrabold text-red-700 mb-4">Acesso Negado!</h1>
-                        <p className="text-lg text-gray-700">Você não tem permissão para acessar esta página.</p>
+                        <p className="text-lg text-gray-700">Não tem permissão para aceder a esta página.</p>
                         <button onClick={() => navigate(-1)} className="mt-6 py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md">
                             Voltar
                         </button>
@@ -187,4 +187,4 @@ function AppWrapper() {
     );
 }
 
-export default AppWrapper; 
+export default AppWrapper;
